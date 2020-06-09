@@ -1,0 +1,6 @@
+Template
+
+C++11/14/17/20 features
+1.如果一个类有析构函数，为其生成拷贝构造函数和拷贝赋值运算符的特性被弃用了。
+2.initializer_list : Anyway, initializer_list is intended to be extremely lightweight. It can use an optimal storage location and prevent unnecessary copies. With vector, you're always going to get a heap allocation and have a good chance of getting more copies/moves than you want.
+3. 
