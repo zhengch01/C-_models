@@ -1,0 +1,82 @@
+adb shell "AudioSetParam AURISYS_SET_PARAM,DSP,ALL,MTKBESSOUND,KEY_VALUE,HAHA,on=SET"
+
+1. write the parameter parser.
+
+source build/envsetup.sh
+lunch full_k79v1_64_pre-eng
+BUILD_WITH_XTENSA=yes  make -j16 droid custom_images 2>&1 | tee build_log.txt
+BUILD_WITH_XTENSA=yes vendor/mediatek/proprietary/tinysys/freertos/source/tools/build_tinysys.sh -j24 2>&1 | tee adsp.log
+
+cd vendor/mediatek/proprietary/tinysys/freertos/source
+BUILD_WITH_XTENSA=yes PROJECT=k79v1_64_pre make adsp
+output folder : vendor/mediatek/proprietary/tinysys/freertos/source/tinysys-scp_out
+Android R : ALLOW_NINJA_ENV=true BUILD_WITH_XTENSA=yes  make -j16 droid custom_images 2>&1 | tee build_log.txt
+
+Integrate for MTK DSP/HAL platform
+
+I. FOR HAL
+1. build the library libmtkdap & libdlbeffdap
+2. Merge the aurisys_config.xml with dlb_sound code block.
+3. push aurisys_config.xml to /vendor/etc/
+4. Make sure that DSP path was disabled with tinymix tool.
+
+II FOR DSP
+1. Merge Dolby changes to vendor/mediatek/proprietary/tinysys/freertos/source as README said
+2. Build the DSP image with command "BUILD_WITH_XTENSA=yes PROJECT=k79v1_64_pre make adsp"
+3. flash the image
+4. Be careful the stask size is not enough issue for different scene such as playback/primary/deep_buf . Glitch will be heard when it happened.
+
+O5453QTau
+
+預設即會開啟mtk logger, log 會在 /sdcard/debuglogger/mobilelog/APLogxxx/adspxxx 底下
+vendor/mediatek/proprietary/external/aurisys/libaudioloud  AP 端 Effect
+
+vendor/mediatek/proprietary/tinysys/freertos/source/middleware/lib/aurisys/lib/common/libbesloudness  DSP 端 Aurisys wrapper
+vendor/mediatek/proprietary/tinysys/freertos/source/middleware/lib/audio/hifi3/libbesloudness DSP 端 Process lib
+
+
+adb shell "AudioSetParam AURISYS_SET_PARAM,DSP,ALL,AURISYS_DEMO,KEY_VALUE,HAHA,on=SET"
+adb shell "AudioSetParam AURISYS_GET_PARAM,DSP,PRIMARY,AURISYS_DEMO,KEY_VALUE,HAHA"
+
+adb shell "AudioSetParam AURISYS_SET_PARAM,DSP,ALL,DLBDAPSOUND,KEY_VALUE,HAHA,on=SET"
+adb shell "AudioSetParam AURISYS_SET_PARAM,HAL,PLAYBACK_NORMAL,DLBDAPSOUND,KEY_VALUE,HAHA,on=SET"
+adb shell "AudioSetParam AURISYS_GET_PARAM,HAL,PLAYBACK_NORMAL,DLBDAPSOUND,KEY_VALUE,DAP_READY"
+adb shell "AudioSetParam AURISYS_GET_PARAM,DSP,PLAYBACK,DLBDAPSOUND,KEY_VALUE,DAP_STATE_EVENT"
+adb shell "AudioSetParam AURISYS_SET_PARAM,DSP,PLAYBACK,DLBDAPSOUND,KEY_VALUE,DAP_STATE,on=SET"
+
+adb shell "AudioSetParam AURISYS_SET_PARAM,DSP,ALL,MTKBESSOUND,ENABLE_LOG,1=SET"
+adb shell "AudioSetParam AURISYS_SET_PARAM,DSP,ALL,MTKBESSOUND,KEY_VALUE,HAHA,on=SET"
+
+adb root
+tinymix dsp_playback_default_en 1
+tinymix dsp_primary_default_en 1
+tinymix dsp_deepbuf_default_en 1
+
+tinymix dsp_playback_default_en 0
+tinymix dsp_primary_default_en 0
+tinymix dsp_deepbuf_default_en 0
+
+adb shell tinymix > tinymix_out.txt
+/usr/bin/vmhgfs-fuse .host:/ /home/czhen/PC -o subtype=vmhgfs-fuse
+
+
+tasks:
+1. Rebase mtk branch to dax3.6
+
+DRCM是漏掉了，RSSA为啥没触发，我研究一下，VCBF没啥用，没有往下面传
+971002ZCyn@@@@
+
+https://chipmaster2.qti.qualcomm.com/home2/git/dolby-laboratories-inc/sm8250-la-1-0-sdx55-tn-1-0_amss_isv_standard.git
+
+what to learn.
+1. Jack2 and PulseAudio. 
+2. Android AudioFrameworks
+***3. go lang/ go lang example code. Golang is fit for server. 1. golive 2.go book
+X*4. Dolby IO / Agora IO
+**5. C++ coroutine / concepts / modules/ ranges
+6. frameworks/av source code.
+7. Improve the code in ds & fv
+8. Kotline study
+*9. jFrog / maven
+10. Try Huang Wei's code review
+

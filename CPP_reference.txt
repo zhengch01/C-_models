@@ -2,5 +2,81 @@ Template
 
 C++11/14/17/20 features
 1.如果一个类有析构函数，为其生成拷贝构造函数和拷贝赋值运算符的特性被弃用了。
+
 2.initializer_list : Anyway, initializer_list is intended to be extremely lightweight. It can use an optimal storage location and prevent unnecessary copies. With vector, you're always going to get a heap allocation and have a good chance of getting more copies/moves than you want.
-3. 
+
+3. 我们希望获得enum class枚举值的值时，将必须显式的进行类型转换，不过我们可以通过重载 << 这个算符来进行输出，可以收藏下面这个代码段:
+#include <iostream>
+template<typename T>
+std::ostream& operator<<(typename std::enable_if<std::is_enum<T>::value, std::ostream>::type& stream, const T& e)
+{
+    return stream << static_cast<typename std::underlying_type<T>::type>(e);
+} 
+
+4.structured binding for average
+auto average(T ... t) {
+    return (t + ... ) / sizeof...(t);
+}
+
+5. revisit tuple 运行期索引 如果你仔细思考一下可能就会发现上面代码的问题，std::get<> 依赖一个编译期的常量，所以下面的方式是不合法的：
+int index = 1;
+std::get<index>(t);
+
+So, we use std::variant<>(dynamic union variable) to resolve this problem:
+
+template <size_t n, typename... T>
+constexpr std::variant<T...> _tuple_index(const std::tuple<T...>& tpl, size_t i) {
+    if constexpr (n >= sizeof...(T))
+        throw std::out_of_range("越界.");
+    if (i == n)
+        return std::variant<T...>{ std::in_place_index<n>, std::get<n>(tpl) };
+    return _tuple_index<(n < sizeof...(T)-1 ? n+1 : 0)>(tpl, i);
+}
+template <typename... T>
+constexpr std::variant<T...> tuple_index(const std::tuple<T...>& tpl, size_t i) {
+    return _tuple_index<0>(tpl, i);
+}
+template <typename T0, typename ... Ts>
+std::ostream & operator<< (std::ostream & s, std::variant<T0, Ts...> const & v) { 
+    std::visit([&](auto && x){ s << x;}, v); 
+    return s;
+}
+
+6.C++11 提供的正则表达式库操作 std::string 对象， 
+模式 std::regex (本质是 std::basic_regex)进行初始化， 
+通过 std::regex_match 进行匹配， 
+从而产生 std::smatch （本质是 std::match_results 对象）。 
+
+7.而 std::unique_lock 则相对于 std::lock_guard 出现的，std::unique_lock 更加灵活， 
+std::unique_lock 的对象会以独占所有权（没有其他的 unique_lock 对象同时拥有某个 mutex 对象的所有权） 
+的方式管理 mutex 对象上的上锁和解锁的操作。所以在并发编程中，推荐使用 std::unique_lock。
+
+8. 条件变量 std::condition_variable 是为了解决死锁而生，当互斥操作不够用而引入的。 比如，线程可能需要等待某个条件为真才能继续执行， 而一个忙等待循环中可能会导致所有其他线程都无法进入临界区使得条件为真时，就会发生死锁。 所以，condition_variable 实例被创建出现主要就是用于唤醒等待线程从而避免死锁。 std::condition_variable的 notify_one() 用于唤醒一个线程； notify_all() 则是通知所有线程。下面是一个生产者和消费者模型的例子：
+
+9. how to check if the type supports atomic operation :
+    std::atomic<A> a;
+    std::cout << std::boolalpha << a.is_lock_free() << std::endl;
+    return 0;
+
+10. C++11 提供了原始字符串字面量的写法，可以在一个字符串前方使用 R 来修饰这个字符串， 同时，将原始字符串使用括号包裹，例如：
+
+#include <iostream>
+#include <string>
+
+int main() {
+    std::string str = R"(C:\File\To\Path)";
+    std::cout << str << std::endl;
+    return 0;
+}
+
+11. New feature : 2020, Coroutine.
+Coroutines are very similar to threads. However, coroutines are cooperatively multitasked, whereas threads are typically preemptively multitasked. This means that coroutines provide concurrency but not parallelism. 
+Coroutines are useful to implement the following:
+    State machines within a single subroutine
+    Actor model of concurrency, for instance in video games.
+    Generators
+    Communicating sequential processes  
+    Reverse communication
+
+12. New feature : 2020, concepts
+
